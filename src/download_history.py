@@ -49,11 +49,7 @@ def download_5years_history() -> None:
         for loc in locations:
             try:
                 df = fetch_and_validate_weather(
-                    prec_no=loc["prec_no"],
-                    prec_name=loc["prec_name"],
-                    block_no=loc["block_no"],
-                    block_name=loc["block_name"],
-                    area_name=loc["area_name"],
+                    location=loc,
                     year=year,
                     month=month,
                 )
@@ -64,7 +60,7 @@ def download_5years_history() -> None:
                         "%04d/%02d %s: %d件のデータを取得完了",
                         year,
                         month,
-                        loc["block_name"],
+                        loc.block_name,
                         len(df),
                     )
                 else:
@@ -72,7 +68,7 @@ def download_5years_history() -> None:
                         "%04d/%02d %s: データがありませんでした",
                         year,
                         month,
-                        loc["block_name"],
+                        loc.block_name,
                     )
 
                 time.sleep(1)
@@ -82,7 +78,7 @@ def download_5years_history() -> None:
                     "%04d/%02d %s の取得中にエラーが発生しました: %s",
                     year,
                     month,
-                    loc.get("block_name"),
+                    loc.block_name,
                     e,
                 )
 

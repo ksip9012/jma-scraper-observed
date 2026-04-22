@@ -9,7 +9,7 @@ import requests
 from bs4 import BeautifulSoup
 from pydantic import ValidationError
 
-from models import WeatherRecord
+from models import Location, WeatherRecord
 
 logger = logging.getLogger(__name__)
 
@@ -76,11 +76,7 @@ def _parse_weather_table(html: str, year: int, month: int) -> pd.DataFrame:
 
 def _validate_weather_records(
     df: pd.DataFrame,
-    prec_no: int,
-    prec_name: str,
-    block_no: int,
-    block_name: str,
-    area_name: str,
+    location: Location,
     year: int,
     month: int,
 ) -> list[dict]:
@@ -90,11 +86,7 @@ def _validate_weather_records(
 
     Args:
         df (pd.DataFrame): パース済みの気象データ DataFrame。
-        prec_no (int): 都道府県番号。
-        prec_name (str): 都道府県名。
-        block_no (int): 地点番号。
-        block_name (str): 地点名。
-        area_name (str): エリア名。
+        location (Location): 観測地点情報。
         year (int): 取得対象の年。
         month (int): 取得対象の月。
 
@@ -114,11 +106,11 @@ def _validate_weather_records(
             day_int = int(float(day_val))
             current_date = date(year, month, day_int)
             record["date"] = current_date.isoformat()
-            record["area_name"] = area_name
-            record["prec_no"] = str(prec_no)
-            record["prec_name"] = prec_name
-            record["block_no"] = str(block_no)
-            record["block_name"] = block_name
+            record["area_name"] = location.area_name
+            record["prec_no"] = str(location.prec_no)
+            record["prec_name"] = location.prec_name
+            record["block_no"] = str(location.block_no)
+            record["block_name"] = location.block_name
 
             v_record = WeatherRecord(**record)
             data_dict = v_record.model_dump()
@@ -140,22 +132,14 @@ def _validate_weather_records(
 
 
 def fetch_and_validate_weather(
-    prec_no: int,
-    prec_name: str,
-    block_no: int,
-    block_name: str,
-    area_name: str,
+    location: Location,
     year: int,
     month: int,
 ) -> pd.DataFrame:
     """気象庁からデータを取得し、Pydanticでバリデーションを行う。
 
     Args:
-        prec_no (int): 都道府県番号。
-        prec_name (str): 都道府県名。
-        block_no (int): 地点番号。
-        block_name (str): 地点名。
-        area_name (str): エリア名。
+        location (Location): 観測地点情報。
         year (int): 取得対象の年。
         month (int): 取得対象の月。
 
@@ -169,16 +153,14 @@ def fetch_and_validate_weather(
     """
     url = (
         f"https://www.data.jma.go.jp/stats/etrn/view/daily_s1.php?"
-        f"prec_no={prec_no}&block_no={block_no}&"
+        f"prec_no={location.prec_no}&block_no={location.block_no}&"
         f"year={year}&month={month:02d}&day=&view=p1"
     )
 
     logger.info("%04d/%02d のデータを取得中: %s", year, month, url)
     html = _fetch_html(url)
     df = _parse_weather_table(html, year, month)
-    validated_records = _validate_weather_records(
-        df, prec_no, prec_name, block_no, block_name, area_name, year, month
-    )
+    validated_records = _validate_weather_records(df, location, year, month)
 
     if not validated_records:
         logger.warning(
