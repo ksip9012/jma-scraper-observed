@@ -82,6 +82,3 @@ def download_5years_history():
 
 if __name__ == "__main__":
     download_5years_history()
-
-if __name__ == "__main__":
-    download_5years_history()
