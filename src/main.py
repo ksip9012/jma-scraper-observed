@@ -17,7 +17,7 @@ import pandas_gbq
 import requests
 from bs4 import BeautifulSoup
 from google.cloud import bigquery
-from pydantic import BaseModel, Field, field_validator, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 # ロギング設定
 logging.basicConfig(level=logging.INFO)
@@ -54,23 +54,13 @@ class WeatherRecord(BaseModel):
     )
 
     # 気温
-    temperature_mean: str | None = Field(
-        None, alias="気温(℃)_気温(℃)_平均"
-    )
-    temperature_max: str | None = Field(
-        None, alias="気温(℃)_気温(℃)_最高"
-    )
-    temperature_min: str | None = Field(
-        None, alias="気温(℃)_気温(℃)_最低"
-    )
+    temperature_mean: str | None = Field(None, alias="気温(℃)_気温(℃)_平均")
+    temperature_max: str | None = Field(None, alias="気温(℃)_気温(℃)_最高")
+    temperature_min: str | None = Field(None, alias="気温(℃)_気温(℃)_最低")
 
     # 湿度
-    humidity_mean: str | None = Field(
-        None, alias="湿度(％)_湿度(％)_平均"
-    )
-    humidity_min: str | None = Field(
-        None, alias="湿度(％)_湿度(％)_最小"
-    )
+    humidity_mean: str | None = Field(None, alias="湿度(％)_湿度(％)_平均")
+    humidity_min: str | None = Field(None, alias="湿度(％)_湿度(％)_最小")
 
     # 風向・風速
     wind_speed_mean: str | None = Field(
@@ -94,9 +84,7 @@ class WeatherRecord(BaseModel):
         None, alias="日照 時間 (h)_日照 時間 (h)_日照 時間 (h)"
     )
     snowfall_total: str | None = Field(None, alias="雪(cm)_雪(cm)_降雪")
-    snow_depth_max: str | None = Field(
-        None, alias="雪(cm)_雪(cm)_最深積雪"
-    )
+    snow_depth_max: str | None = Field(None, alias="雪(cm)_雪(cm)_最深積雪")
 
     # 天気概況
     weather_daytime: str | None = Field(
@@ -124,9 +112,7 @@ class WeatherRecord(BaseModel):
         str_val = str(value)
 
         # ')', ']', '*' などの記号を削除
-        clean_val = (
-            str_val.replace(")", "").replace("]", "").replace("*", "")
-        )
+        clean_val = str_val.replace(")", "").replace("]", "").replace("*", "")
 
         if clean_val in ["--", "×", "///", ""]:
             return None
@@ -152,12 +138,48 @@ def parse_location_json(locations_json: str) -> list[dict]:
 
 def get_default_locations() -> list[dict]:
     return [
-        {"area_name": "首都圏", "prec_no": 44, "prec_name": "東京", "block_no": 47662, "block_name": "東京"},
-        {"area_name": "近畿", "prec_no": 62, "prec_name": "大阪", "block_no": 47772, "block_name": "大阪"},
-        {"area_name": "九州", "prec_no": 82, "prec_name": "福岡", "block_no": 47807, "block_name": "福岡"},
-        {"area_name": "四国", "prec_no": 72, "prec_name": "香川", "block_no": 47891, "block_name": "高松"},
-        {"area_name": "中国", "prec_no": 67, "prec_name": "広島", "block_no": 47765, "block_name": "広島"},
-        {"area_name": "東海", "prec_no": 51, "prec_name": "愛知", "block_no": 47636, "block_name": "名古屋"},
+        {
+            "area_name": "首都圏",
+            "prec_no": 44,
+            "prec_name": "東京",
+            "block_no": 47662,
+            "block_name": "東京",
+        },
+        {
+            "area_name": "近畿",
+            "prec_no": 62,
+            "prec_name": "大阪",
+            "block_no": 47772,
+            "block_name": "大阪",
+        },
+        {
+            "area_name": "九州",
+            "prec_no": 82,
+            "prec_name": "福岡",
+            "block_no": 47807,
+            "block_name": "福岡",
+        },
+        {
+            "area_name": "四国",
+            "prec_no": 72,
+            "prec_name": "香川",
+            "block_no": 47891,
+            "block_name": "高松",
+        },
+        {
+            "area_name": "中国",
+            "prec_no": 67,
+            "prec_name": "広島",
+            "block_no": 47765,
+            "block_name": "広島",
+        },
+        {
+            "area_name": "東海",
+            "prec_no": 51,
+            "prec_name": "愛知",
+            "block_no": 47636,
+            "block_name": "名古屋",
+        },
     ]
 
 
@@ -168,6 +190,7 @@ def get_locations_from_env() -> list[dict]:
         if locations:
             return locations
     return get_default_locations()
+
 
 def fetch_and_validate_weather(
     prec_no: int,
@@ -265,7 +288,7 @@ def fetch_and_validate_weather(
             if any(v is not None for v in obs_values):
                 validated_records.append(data_dict)
 
-        except (ValueError, ValidationError):
+        except ValueError, ValidationError:
             # 不正な行（未来の日付や空行）は黙ってスキップ
             continue
 
@@ -314,7 +337,9 @@ def weather_ingestion_handler(request: Any = None) -> tuple[str, int]:
         DELETE FROM `{table_full_id}`
         WHERE STARTS_WITH(date, '{date_prefix}')
     """
-    logger.info("%04d/%02d の既存データを削除中: %s", year, month, table_full_id)
+    logger.info(
+        "%04d/%02d の既存データを削除中: %s", year, month, table_full_id
+    )
 
     try:
         client.query(delete_query).result()
