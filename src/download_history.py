@@ -1,7 +1,4 @@
-"""過去5年分の気象データを一括で取得し、ローカルのCSVに保存するスクリプト。
-
-src/main.py のロジックを使用してバリデーション済みのデータを収集します。
-"""
+"""過去5年分の気象データを一括で取得し、ローカルのCSVに保存するスクリプト。"""
 
 import logging
 import time
@@ -10,18 +7,18 @@ from datetime import datetime
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
-from main import fetch_and_validate_weather, get_locations_from_env
+from config import get_locations_from_env
+from scraper import fetch_and_validate_weather
 
-# ロギング設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
 
-def download_5years_history():
+def download_5years_history() -> None:
     """現在から遡って5年分のデータを全地点分取得し、1つのCSVに保存する。"""
-
     locations = get_locations_from_env()
 
     end_date = datetime.now()
@@ -43,12 +40,13 @@ def download_5years_history():
         for loc in locations:
             try:
                 df = fetch_and_validate_weather(
-                    loc["prec_no"],
-                    loc["prec_name"],
-                    loc["block_no"],
-                    loc["block_name"],
-                    year,
-                    month,
+                    prec_no=loc["prec_no"],
+                    prec_name=loc["prec_name"],
+                    block_no=loc["block_no"],
+                    block_name=loc["block_name"],
+                    area_name=loc["area_name"],
+                    year=year,
+                    month=month,
                 )
 
                 if not df.empty:
@@ -68,7 +66,6 @@ def download_5years_history():
                         loc["block_name"],
                     )
 
-                # サーバー負荷軽減のための待機
                 time.sleep(1)
 
             except Exception as e:
@@ -84,7 +81,6 @@ def download_5years_history():
 
     if all_dfs:
         master_df = pd.concat(all_dfs, ignore_index=True)
-
         output_file = "../data/weather_history_5y.csv"
         # utf-8-sig を使うとExcelで開いた際の文字化けを防げます
         master_df.to_csv(output_file, index=False, encoding="utf-8-sig")
