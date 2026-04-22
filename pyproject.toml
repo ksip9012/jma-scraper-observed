@@ -20,3 +20,24 @@ dependencies = [
 dev = [
     "ruff>=0.15.5",
 ]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 79
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["main"]
+
+[tool.ruff.format]
+docstring-code-line-length = 72
