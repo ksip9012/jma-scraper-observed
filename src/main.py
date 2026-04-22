@@ -298,63 +298,71 @@ def weather_ingestion_handler(request: Any = None) -> tuple[str, int]:
         logger.error("GCP_PROJECT_ID が設定されていません。")
         return "Error: GCP_PROJECT_ID not set", 500
 
-    # 地点設定（デフォルト: 東京）
-    prec_no = int(os.getenv("JMA_PREC_NO", "44"))
-    prec_name = os.getenv("JMA_PREC_NAME", "東京")
-    block_no = int(os.getenv("JMA_BLOCK_NO", "47662"))
-    block_name = os.getenv("JMA_BLOCK_NAME", "東京")
+    locations = get_locations_from_env()
 
     # 対象年月の特定: 実行時の前日を使用
     target_date = datetime.now() - timedelta(days=1)
     year, month = target_date.year, target_date.month
 
+    # BigQuery クライアント初期化
+    client = bigquery.Client(project=project_id)
+    table_full_id = f"{project_id}.{dataset_id}.{table_id}"
+
+    # 既存の当月分データを削除 (冪等性を担保)
+    date_prefix = f"{year}-{month:02d}-"
+    delete_query = f"""
+        DELETE FROM `{table_full_id}`
+        WHERE STARTS_WITH(date, '{date_prefix}')
+    """
+    logger.info("%04d/%02d の既存データを削除中: %s", year, month, table_full_id)
+
     try:
-        df = fetch_and_validate_weather(
-            prec_no, prec_name, block_no, block_name, year, month
-        )
-
-        if df.empty:
-            return f"{year}/{month} のアップロード対象データがありません", 200
-
-        # BigQuery クライアント初期化
-        client = bigquery.Client(project=project_id)
-        table_full_id = f"{project_id}.{dataset_id}.{table_id}"
-
-        # 既存の当月分データを削除 (冪等性を担保)
-        # date は "YYYY-MM-DD" 形式の文字列
-        date_prefix = f"{year}-{month:02d}-"
-        delete_query = f"""
-            DELETE FROM `{table_full_id}`
-            WHERE STARTS_WITH(date, '{date_prefix}')
-        """
-        logger.info(
-            "%04d/%02d の既存データを削除中: %s", year, month, table_full_id
-        )
         client.query(delete_query).result()
+    except Exception as e:
+        logger.exception("既存データの削除に失敗しました。")
+        return f"Error: {str(e)}", 500
 
-        # BigQueryへアップロード (追記)
+    all_dfs = []
+    for loc in locations:
+        try:
+            df = fetch_and_validate_weather(
+                loc["prec_no"],
+                loc["prec_name"],
+                loc["block_no"],
+                loc["block_name"],
+                year,
+                month,
+            )
+            if not df.empty:
+                all_dfs.append(df)
+        except Exception:
+            logger.exception(
+                "%s のデータ取得に失敗しました。", loc.get("block_name")
+            )
+
+    if not all_dfs:
+        return f"{year}/{month} のアップロード対象データがありません", 200
+
+    combined_df = pd.concat(all_dfs, ignore_index=True)
+
+    try:
         logger.info(
             "%d 行のデータを %s へアップロード中 (追記)...",
-            len(df),
+            len(combined_df),
             table_full_id,
         )
-
         pandas_gbq.to_gbq(
-            df,
+            combined_df,
             f"{dataset_id}.{table_id}",
             project_id=project_id,
             if_exists="append",
             progress_bar=False,
         )
-
-        return (
-            f"Successfully updated {table_full_id} for {year}/{month}",
-            200,
-        )
-
     except Exception as e:
-        logger.exception("気象データの取り込みに失敗しました。")
+        logger.exception("BigQuery へのアップロードに失敗しました。")
         return f"Error: {str(e)}", 500
+
+    return f"Successfully updated {table_full_id} for {year}/{month}", 200
 
 
 if __name__ == "__main__":
