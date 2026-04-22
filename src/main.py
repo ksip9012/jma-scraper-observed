@@ -157,7 +157,7 @@ def get_default_locations() -> list[dict]:
         {"area_name": "九州", "prec_no": 82, "prec_name": "福岡", "block_no": 47807, "block_name": "福岡"},
         {"area_name": "四国", "prec_no": 72, "prec_name": "香川", "block_no": 47891, "block_name": "高松"},
         {"area_name": "中国", "prec_no": 67, "prec_name": "広島", "block_no": 47765, "block_name": "広島"},
-        {"area_name": "東海", "prec_no": 51, }
+        {"area_name": "東海", "prec_no": 51, "prec_name": "愛知", "block_no": 47636, "block_name": "名古屋"},
     ]
 
 
