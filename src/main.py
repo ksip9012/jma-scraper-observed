@@ -192,6 +192,89 @@ def get_locations_from_env() -> list[dict]:
     return get_default_locations()
 
 
+_META_KEYS = {
+    "date",
+    "area_name",
+    "prec_no",
+    "prec_name",
+    "block_no",
+    "block_name",
+}
+
+
+def _fetch_html(url: str) -> str:
+    """気象庁のURLからHTMLを取得する。"""
+    response = requests.get(url, timeout=15)
+    response.encoding = response.apparent_encoding
+    response.raise_for_status()
+    return response.text
+
+
+def _parse_weather_table(html: str, year: int, month: int) -> pd.DataFrame:
+    """HTMLから気象テーブルをパースし、フラットなカラムを持つDataFrameを返す。"""
+    soup = BeautifulSoup(html, "lxml")
+    table = soup.find("table", class_="data2_s")
+    if not table:
+        raise ValueError(f"{year}/{month} の気象テーブルが見つかりません。")
+
+    dfs = pd.read_html(io.StringIO(str(table)), header=[0, 1, 2])
+    df = dfs[0]
+
+    if df.iloc[0, 0] == "日":
+        df = df.iloc[1:].reset_index(drop=True)
+
+    df.columns = [
+        "_".join([str(c) for c in col if "Unnamed" not in str(c)])
+        for col in df.columns.values
+    ]
+    return df
+
+
+def _validate_weather_records(
+    df: pd.DataFrame,
+    prec_no: int,
+    prec_name: str,
+    block_no: int,
+    block_name: str,
+    year: int,
+    month: int,
+) -> list[dict]:
+    """DataFrameの各行をPydanticでバリデーションし、有効なレコードのリストを返す。"""
+    validated_records = []
+
+    for record in df.to_dict(orient="records"):
+        day_key = list(record.keys())[0]
+        day_val = record.get(day_key)
+
+        if pd.isna(day_val) or str(day_val).strip() == "":
+            continue
+
+        try:
+            day_int = int(float(day_val))
+            current_date = date(year, month, day_int)
+            record["date"] = current_date.isoformat()
+            record["prec_no"] = str(prec_no)
+            record["prec_name"] = prec_name
+            record["block_no"] = str(block_no)
+            record["block_name"] = block_name
+
+            v_record = WeatherRecord(**record)
+            data_dict = v_record.model_dump()
+
+            # 観測データが1つ以上存在するレコードのみ抽出
+            # （気象庁の表にある未来の日付を除外するため）
+            obs_values = [
+                v for k, v in data_dict.items() if k not in _META_KEYS
+            ]
+            if any(v is not None for v in obs_values):
+                validated_records.append(data_dict)
+
+        except ValueError, ValidationError:
+            continue
+
+    return validated_records
+
+
 def fetch_and_validate_weather(
     prec_no: int,
     prec_name: str,
@@ -220,77 +303,11 @@ def fetch_and_validate_weather(
     )
 
     logger.info("%04d/%02d のデータを取得中: %s", year, month, url)
-    response = requests.get(url, timeout=15)
-    response.encoding = response.apparent_encoding
-    response.raise_for_status()
-
-    soup = BeautifulSoup(response.text, "lxml")
-    table = soup.find("table", class_="data2_s")
-    if not table:
-        raise ValueError(f"{year}/{month} の気象テーブルが見つかりません。")
-
-    # pandasでHTMLを解析
-    dfs = pd.read_html(io.StringIO(str(table)), header=[0, 1, 2])
-    df = dfs[0]
-
-    # 不要なヘッダー行を削除
-    if df.iloc[0, 0] == "日":
-        df = df.iloc[1:].reset_index(drop=True)
-
-    # カラム名をフラット化
-    df.columns = [
-        "_".join([str(c) for c in col if "Unnamed" not in str(c)])
-        for col in df.columns.values
-    ]
-
-    # バリデーション用に辞書のリストに変換
-    raw_records = df.to_dict(orient="records")
-    validated_records = []
-
-    for record in raw_records:
-        day_key = list(record.keys())[0]
-        day_val = record.get(day_key)
-
-        # 日付が空、またはNaNの場合はスキップ
-        if pd.isna(day_val) or str(day_val).strip() == "":
-            continue
-
-        try:
-            # 日付オブジェクトを作成し、文字列に変換
-            day_int = int(float(day_val))
-            current_date = date(year, month, day_int)
-            record["date"] = current_date.isoformat()
-
-            # 地域情報を追加
-            record["prec_no"] = str(prec_no)
-            record["prec_name"] = prec_name
-            record["block_no"] = str(block_no)
-            record["block_name"] = block_name
-
-            # 行のバリデーション
-            v_record = WeatherRecord(**record)
-
-            # 最適化: 観測データが1つ以上存在するレコードのみを抽出
-            # （気象庁の表にある未来の日付を除外するため）
-            data_dict = v_record.model_dump()
-            obs_values = [
-                v
-                for k, v in data_dict.items()
-                if k
-                not in [
-                    "date",
-                    "prec_no",
-                    "prec_name",
-                    "block_no",
-                    "block_name",
-                ]
-            ]
-            if any(v is not None for v in obs_values):
-                validated_records.append(data_dict)
-
-        except ValueError, ValidationError:
-            # 不正な行（未来の日付や空行）は黙ってスキップ
-            continue
+    html = _fetch_html(url)
+    df = _parse_weather_table(html, year, month)
+    validated_records = _validate_weather_records(
+        df, prec_no, prec_name, block_no, block_name, year, month
+    )
 
     if not validated_records:
         logger.warning(
