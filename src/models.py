@@ -6,6 +6,16 @@ import pandas as pd
 from pydantic import BaseModel, Field, field_validator
 
 
+class Location(BaseModel):
+    """気象庁の観測地点を定義するモデル。"""
+
+    area_name: str
+    prec_no: int
+    prec_name: str
+    block_no: int
+    block_name: str
+
+
 class WeatherRecord(BaseModel):
     """気象庁の1日あたりの気象データを定義するスキーマ。"""
 

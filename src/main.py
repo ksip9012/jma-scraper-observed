@@ -53,20 +53,14 @@ def weather_ingestion_handler(request: object = None) -> tuple[str, int]:
     for loc in locations:
         try:
             df = fetch_and_validate_weather(
-                prec_no=loc["prec_no"],
-                prec_name=loc["prec_name"],
-                block_no=loc["block_no"],
-                block_name=loc["block_name"],
-                area_name=loc["area_name"],
+                location=loc,
                 year=year,
                 month=month,
             )
             if not df.empty:
                 all_dfs.append(df)
         except Exception:
-            logger.exception(
-                "%s のデータ取得に失敗しました。", loc.get("block_name")
-            )
+            logger.exception("%s のデータ取得に失敗しました。", loc.block_name)
 
     if not all_dfs:
         return f"{year}/{month} のアップロード対象データがありません", 200
