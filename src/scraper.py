@@ -24,7 +24,18 @@ _META_KEYS = {
 
 
 def _fetch_html(url: str) -> str:
-    """気象庁のURLからHTMLを取得する。"""
+    """気象庁のURLからHTMLを取得する。
+
+    Args:
+        url (str): 取得対象の URL。
+
+    Returns:
+        str: レスポンスの HTML テキスト。
+
+    Raises:
+        requests.HTTPError: HTTP エラーが発生した場合。
+        requests.Timeout: リクエストがタイムアウトした場合。
+    """
     response = requests.get(url, timeout=15)
     response.encoding = response.apparent_encoding
     response.raise_for_status()
@@ -32,7 +43,19 @@ def _fetch_html(url: str) -> str:
 
 
 def _parse_weather_table(html: str, year: int, month: int) -> pd.DataFrame:
-    """HTMLから気象テーブルをパースし、フラットなカラムを持つDataFrameを返す。"""
+    """HTMLから気象テーブルをパースし、フラットなカラムを持つDataFrameを返す。
+
+    Args:
+        html (str): 気象庁ページの HTML テキスト。
+        year (int): 取得対象の年（エラーメッセージ用）。
+        month (int): 取得対象の月（エラーメッセージ用）。
+
+    Returns:
+        pd.DataFrame: フラット化されたカラム名を持つ気象データの DataFrame。
+
+    Raises:
+        ValueError: HTML 内に気象テーブルが見つからない場合。
+    """
     soup = BeautifulSoup(html, "lxml")
     table = soup.find("table", class_="data2_s")
     if not table:
@@ -61,7 +84,23 @@ def _validate_weather_records(
     year: int,
     month: int,
 ) -> list[dict]:
-    """DataFrameの各行をPydanticでバリデーションし、有効なレコードのリストを返す。"""
+    """DataFrameの各行をPydanticでバリデーションし、有効なレコードのリストを返す。
+
+    日付が空・不正な行や、観測値が1つも存在しない行（未来日付など）はスキップする。
+
+    Args:
+        df (pd.DataFrame): パース済みの気象データ DataFrame。
+        prec_no (int): 都道府県番号。
+        prec_name (str): 都道府県名。
+        block_no (int): 地点番号。
+        block_name (str): 地点名。
+        area_name (str): エリア名。
+        year (int): 取得対象の年。
+        month (int): 取得対象の月。
+
+    Returns:
+        list[dict]: バリデーション済みの気象レコードの辞書リスト。
+    """
     validated_records = []
 
     for record in df.to_dict(orient="records"):
@@ -92,7 +131,7 @@ def _validate_weather_records(
             if any(v is not None for v in obs_values):
                 validated_records.append(data_dict)
 
-        except ValueError, ValidationError:
+        except (ValueError, ValidationError):
             continue
 
     return validated_records
@@ -120,6 +159,11 @@ def fetch_and_validate_weather(
 
     Returns:
         pd.DataFrame: 指定された月のバリデーション済み気象データ。
+            有効なレコードが存在しない場合は空の DataFrame を返す。
+
+    Raises:
+        requests.HTTPError: 気象庁へのリクエストが失敗した場合。
+        ValueError: HTML 内に気象テーブルが見つからない場合。
     """
     url = (
         f"https://www.data.jma.go.jp/stats/etrn/view/daily_s1.php?"

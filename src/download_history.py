@@ -18,7 +18,16 @@ logger = logging.getLogger(__name__)
 
 
 def download_5years_history() -> None:
-    """現在から遡って5年分のデータを全地点分取得し、1つのCSVに保存する。"""
+    """現在から遡って5年分のデータを全地点分取得し、1つのCSVに保存する。
+
+    取得対象地点は環境変数 JMA_LOCATIONS または
+    デフォルト地点リストから取得する。
+    出力先は `../data/weather_history_5y.csv`（utf-8-sig エンコード）。
+    気象庁サーバーへの負荷軽減のため、地点ごとに1秒の待機を挟む。
+
+    Returns:
+        None
+    """
     locations = get_locations_from_env()
 
     end_date = datetime.now()

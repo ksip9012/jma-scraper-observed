@@ -15,7 +15,21 @@ def delete_month_data(
     year: int,
     month: int,
 ) -> None:
-    """指定した年月の既存データを BigQuery から削除する。"""
+    """指定した年月の既存データを BigQuery から削除する。
+
+    冪等性を担保するため、アップロード前に当月分のデータを削除する。
+
+    Args:
+        client (bigquery.Client): BigQuery クライアント。
+        table_full_id (str): 対象テーブルのフル ID
+            （例: `project.dataset.table`）。
+        year (int): 削除対象の年。
+        month (int): 削除対象の月。
+
+    Raises:
+        google.cloud.exceptions.GoogleCloudError: BigQuery へのクエリが
+            失敗した場合。
+    """
     date_prefix = f"{year}-{month:02d}-"
     delete_query = f"""
         DELETE FROM `{table_full_id}`
@@ -34,7 +48,20 @@ def upload_to_bigquery(
     table_id: str,
     table_full_id: str,
 ) -> None:
-    """DataFrame を BigQuery テーブルへ追記アップロードする。"""
+    """DataFrame を BigQuery テーブルへ追記アップロードする。
+
+    Args:
+        df (pd.DataFrame): アップロード対象のデータフレーム。
+        project_id (str): GCP プロジェクト ID。
+        dataset_id (str): BigQuery データセット ID。
+        table_id (str): BigQuery テーブル ID。
+        table_full_id (str): ログ出力用のフル ID
+            （例: `project.dataset.table`）。
+
+    Raises:
+        google.cloud.exceptions.GoogleCloudError: アップロードが
+            失敗した場合。
+    """
     logger.info(
         "%d 行のデータを %s へアップロード中 (追記)...",
         len(df),
