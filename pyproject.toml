@@ -34,7 +34,11 @@ select = [
     "B",   # flake8-bugbear
     "UP",  # pyupgrade
 ]
-ignore = []
+ignore = [
+    "RUF001",  # 日本語全角文字（意図的な使用）
+    "RUF002",  # 日本語全角文字（docstring）
+    "RUF003",  # 日本語全角文字（コメント）
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["main"]

@@ -32,8 +32,8 @@ def parse_location_json(locations_json: str) -> list[dict]:
     """
     try:
         return json.loads(locations_json)
-    except Exception as e:
-        logger.error(f"JMA_LOCATIONSのパースに失敗: {e}")
+    except json.JSONDecodeError as e:
+        logger.error("JMA_LOCATIONSのパースに失敗: %s", e)
         return []
 
 

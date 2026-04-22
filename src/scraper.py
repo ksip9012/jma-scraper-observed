@@ -69,7 +69,7 @@ def _parse_weather_table(html: str, year: int, month: int) -> pd.DataFrame:
 
     df.columns = [
         "_".join([str(c) for c in col if "Unnamed" not in str(c)])
-        for col in df.columns.values
+        for col in df.columns
     ]
     return df
 
@@ -104,7 +104,7 @@ def _validate_weather_records(
     validated_records = []
 
     for record in df.to_dict(orient="records"):
-        day_key = list(record.keys())[0]
+        day_key = next(iter(record.keys()))
         day_val = record.get(day_key)
 
         if pd.isna(day_val) or str(day_val).strip() == "":
