@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# 出力データ
+data/*
+!data/.gitkeep
+
+# エディタ設定
+.vscode/
+
+# 環境変数
+.env
