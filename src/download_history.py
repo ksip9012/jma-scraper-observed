@@ -87,7 +87,9 @@ def download_5years_history() -> None:
 
     if all_dfs:
         master_df = pd.concat(all_dfs, ignore_index=True)
-        output_file = Path(__file__).parent.parent / "data" / "weather_history_5y.csv"
+        output_file = (
+            Path(__file__).parent.parent / "data" / "weather_history_5y.csv"
+        )
         # utf-8-sig を使うとExcelで開いた際の文字化けを防げます
         master_df.to_csv(output_file, index=False, encoding="utf-8-sig")
 
