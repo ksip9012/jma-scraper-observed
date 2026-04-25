@@ -123,9 +123,7 @@ def _validate_weather_records(
             if any(v is not None for v in obs_values):
                 validated_records.append(data_dict)
 
-        except ValueError:
-            continue
-        except ValidationError:
+        except ValueError, ValidationError:
             continue
 
     return validated_records
