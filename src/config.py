@@ -35,7 +35,7 @@ def parse_location_json(locations_json: str) -> list[Location]:
     try:
         raw_list = json.loads(locations_json)
         return [Location.model_validate(item) for item in raw_list]
-    except (json.JSONDecodeError, Exception) as e:
+    except Exception as e:
         logger.error("JMA_LOCATIONSのパースに失敗: %s", e)
         return []
 
