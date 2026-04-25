@@ -1,0 +1,26 @@
+# 開発ツール
+.venv/
+.vscode/
+.git/
+.github/
+
+# キャッシュ
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+*.pyo
+
+# プロジェクト設定・ドキュメント
+CLAUDE.md
+README.md
+mise.toml
+.python-version
+.gitignore
+
+# テスト・開発用ファイル
+tests/
+requirements.txt
+
+# データ
+data/

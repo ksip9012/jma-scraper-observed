@@ -1,11 +1,8 @@
-"""気象庁の気象データを取得し、BigQueryにアップロードするCloud Function。
-
-実行時の日付から自動的に対象の年月を特定し、気象庁からデータを取得します。
-Pydantic でバリデーションを行い、BigQuery のテーブルを更新します。
-"""
+"""気象庁データを取得し、BigQuery へアップロードする Cloud Run Jobs 処理。"""
 
 import logging
 import os
+import sys
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -19,22 +16,22 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def weather_ingestion_handler(request: object = None) -> tuple[str, int]:
-    """Cloud Functionのエントリポイント（HTTP/PubSubトリガー）。
-
-    Args:
-        request (object, optional): Cloud Functionのリクエストオブジェクト。
+def weather_ingestion_handler() -> None:
+    """気象データの取得・バリデーション・BigQuery アップロードを実行する。
 
     Returns:
-        tuple[str, int]: レスポンスメッセージとHTTPステータスコード。
+        None
+
+    Raises:
+        RuntimeError: GCP_PROJECT_ID が未設定の場合。
+        google.cloud.exceptions.GoogleCloudError: BigQuery 操作が失敗した場合。
     """
     project_id = os.getenv("GCP_PROJECT_ID")
     dataset_id = os.getenv("BQ_DATASET_ID", "weather_data")
     table_id = os.getenv("BQ_TABLE_ID", "daily_stats")
 
     if not project_id:
-        logger.error("GCP_PROJECT_ID が設定されていません。")
-        return "Error: GCP_PROJECT_ID not set", 500
+        raise RuntimeError("GCP_PROJECT_ID が設定されていません。")
 
     locations = get_locations_from_env()
     target_date = datetime.now() - timedelta(days=1)
@@ -43,11 +40,7 @@ def weather_ingestion_handler(request: object = None) -> tuple[str, int]:
     client = bigquery.Client(project=project_id)
     table_full_id = f"{project_id}.{dataset_id}.{table_id}"
 
-    try:
-        delete_month_data(client, table_full_id, year, month)
-    except Exception as e:
-        logger.exception("既存データの削除に失敗しました。")
-        return f"Error: {str(e)}", 500
+    delete_month_data(client, table_full_id, year, month)
 
     all_dfs = []
     for loc in locations:
@@ -63,20 +56,23 @@ def weather_ingestion_handler(request: object = None) -> tuple[str, int]:
             logger.exception("%s のデータ取得に失敗しました。", loc.block_name)
 
     if not all_dfs:
-        return f"{year}/{month} のアップロード対象データがありません", 200
+        logger.warning(
+            "%04d/%02d のアップロード対象データがありません。", year, month
+        )
+        return
 
     combined_df = pd.concat(all_dfs, ignore_index=True)
-
-    try:
-        upload_to_bigquery(
-            combined_df, project_id, dataset_id, table_id, table_full_id
-        )
-    except Exception as e:
-        logger.exception("BigQuery へのアップロードに失敗しました。")
-        return f"Error: {str(e)}", 500
-
-    return f"Successfully updated {table_full_id} for {year}/{month}", 200
+    upload_to_bigquery(
+        combined_df, project_id, dataset_id, table_id, table_full_id
+    )
+    logger.info(
+        "%s を %04d/%02d のデータで更新しました。", table_full_id, year, month
+    )
 
 
 if __name__ == "__main__":
-    print(weather_ingestion_handler())
+    try:
+        weather_ingestion_handler()
+    except Exception:
+        logger.exception("処理が失敗しました。")
+        sys.exit(1)

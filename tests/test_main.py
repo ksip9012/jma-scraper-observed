@@ -31,14 +31,14 @@ SAMPLE_DF = pd.DataFrame(
 class TestWeatherIngestionHandler:
     """weather_ingestion_handler のテスト。"""
 
-    def test_returns_500_when_no_project_id(self, monkeypatch):
-        """GCP_PROJECT_ID 未設定時はステータス 500 を返す。"""
+    def test_raises_when_no_project_id(self, monkeypatch):
+        """GCP_PROJECT_ID 未設定時は RuntimeError を送出する。"""
         monkeypatch.delenv("GCP_PROJECT_ID", raising=False)
-        _, status = weather_ingestion_handler()
-        assert status == 500
+        with pytest.raises(RuntimeError, match="GCP_PROJECT_ID"):
+            weather_ingestion_handler()
 
-    def test_returns_200_with_valid_data(self, monkeypatch):
-        """正常系（データあり）はステータス 200 を返す。"""
+    def test_succeeds_with_valid_data(self, monkeypatch):
+        """正常系（データあり）は例外を送出せずに完了する。"""
         monkeypatch.setenv("GCP_PROJECT_ID", "test-project")
         with (
             mock.patch("main.bigquery.Client"),
@@ -51,8 +51,7 @@ class TestWeatherIngestionHandler:
             ),
             mock.patch("main.upload_to_bigquery"),
         ):
-            _, status = weather_ingestion_handler()
-        assert status == 200
+            weather_ingestion_handler()  # 例外が出なければ成功
 
     def test_upload_is_called_with_data(self, monkeypatch):
         """データあり時は upload_to_bigquery が呼ばれる。"""
@@ -71,8 +70,8 @@ class TestWeatherIngestionHandler:
             weather_ingestion_handler()
         mock_upload.assert_called_once()
 
-    def test_returns_200_when_no_data(self, monkeypatch):
-        """全地点でデータなし時はステータス 200 を返す。"""
+    def test_succeeds_when_no_data(self, monkeypatch):
+        """全地点でデータなし時は例外を送出せず、upload は呼ばれない。"""
         monkeypatch.setenv("GCP_PROJECT_ID", "test-project")
         with (
             mock.patch("main.bigquery.Client"),
@@ -86,6 +85,5 @@ class TestWeatherIngestionHandler:
             ),
             mock.patch("main.upload_to_bigquery") as mock_upload,
         ):
-            _, status = weather_ingestion_handler()
-        assert status == 200
+            weather_ingestion_handler()  # 例外が出なければ成功
         mock_upload.assert_not_called()
