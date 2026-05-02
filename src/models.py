@@ -2,7 +2,7 @@
 
 from typing import Any
 
-import pandas as pd
+import math
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -97,7 +97,7 @@ class WeatherRecord(BaseModel):
         Returns:
             Any: クリーニング後の文字列。欠損値の場合は None を返す。
         """
-        if value is None or (isinstance(value, float) and pd.isna(value)):
+        if value is None or (isinstance(value, float) and math.isnan(value)):
             return None
 
         str_val = str(value)
