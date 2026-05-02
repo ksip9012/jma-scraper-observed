@@ -1,8 +1,8 @@
 """気象庁の気象データの Pydantic モデル定義。"""
 
+import math
 from typing import Any
 
-import math
 from pydantic import BaseModel, Field, field_validator
 
 
