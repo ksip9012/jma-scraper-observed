@@ -52,30 +52,34 @@ class TestDeleteMonthData:
 class TestUploadToBigquery:
     """upload_to_bigquery のテスト。"""
 
-    def test_to_gbq_is_called(self):
-        """pandas_gbq.to_gbq が1回呼ばれる。"""
+    def test_load_table_is_called(self):
+        """client.load_table_from_dataframe が1回呼ばれる。"""
         df = pd.DataFrame({"col": [1, 2]})
-        with mock.patch("bigquery_client.pandas_gbq.to_gbq") as mock_to_gbq:
-            upload_to_bigquery(df, "proj", "ds", "tbl", "proj.ds.tbl")
-        mock_to_gbq.assert_called_once()
+        mock_client = mock.MagicMock()
+        upload_to_bigquery(mock_client, df, "proj.ds.tbl")
+        mock_client.load_table_from_dataframe.assert_called_once()
 
-    def test_correct_project_id(self):
-        """正しい project_id で呼ばれる。"""
+    def test_correct_table_full_id(self):
+        """正しい table_full_id で呼ばれる。"""
         df = pd.DataFrame({"col": [1]})
-        with mock.patch("bigquery_client.pandas_gbq.to_gbq") as mock_to_gbq:
-            upload_to_bigquery(df, "my-project", "ds", "tbl", "my-project.ds.tbl")
-        assert mock_to_gbq.call_args.kwargs["project_id"] == "my-project"
+        mock_client = mock.MagicMock()
+        upload_to_bigquery(mock_client, df, "my-project.ds.tbl")
+        args = mock_client.load_table_from_dataframe.call_args
+        assert args.args[1] == "my-project.ds.tbl"
 
     def test_append_mode(self):
-        """if_exists="append" で呼ばれる。"""
+        """WRITE_APPEND の write_disposition で呼ばれる。"""
         df = pd.DataFrame({"col": [1]})
-        with mock.patch("bigquery_client.pandas_gbq.to_gbq") as mock_to_gbq:
-            upload_to_bigquery(df, "proj", "ds", "tbl", "proj.ds.tbl")
-        assert mock_to_gbq.call_args.kwargs["if_exists"] == "append"
+        mock_client = mock.MagicMock()
+        upload_to_bigquery(mock_client, df, "proj.ds.tbl")
+        job_config = mock_client.load_table_from_dataframe.call_args.kwargs[
+            "job_config"
+        ]
+        assert job_config.write_disposition == "WRITE_APPEND"
 
-    def test_progress_bar_disabled(self):
-        """progress_bar=False で呼ばれる。"""
+    def test_result_is_called(self):
+        """load_table_from_dataframe().result() が呼ばれる。"""
         df = pd.DataFrame({"col": [1]})
-        with mock.patch("bigquery_client.pandas_gbq.to_gbq") as mock_to_gbq:
-            upload_to_bigquery(df, "proj", "ds", "tbl", "proj.ds.tbl")
-        assert mock_to_gbq.call_args.kwargs["progress_bar"] is False
+        mock_client = mock.MagicMock()
+        upload_to_bigquery(mock_client, df, "proj.ds.tbl")
+        mock_client.load_table_from_dataframe.return_value.result.assert_called_once()

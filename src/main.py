@@ -63,9 +63,7 @@ def weather_ingestion_handler() -> None:
         return
 
     combined_df = pd.concat(all_dfs, ignore_index=True)
-    upload_to_bigquery(
-        combined_df, project_id, dataset_id, table_id, table_full_id
-    )
+    upload_to_bigquery(client, combined_df, table_full_id)
     logger.info(
         "%s を %04d/%02d のデータで更新しました。", table_full_id, year, month
     )
