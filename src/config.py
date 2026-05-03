@@ -3,10 +3,14 @@
 import json
 import logging
 import os
+import tomllib
+from pathlib import Path
 
 from pydantic import ValidationError
 
 from models import Location
+
+_LOCATIONS_TOML = Path(__file__).parent / "locations.toml"
 
 logger = logging.getLogger(__name__)
 
@@ -59,55 +63,14 @@ def parse_location_json(locations_json: str) -> list[Location]:
 
 
 def get_default_locations() -> list[Location]:
-    """デフォルトの観測地点リストを返す。
+    """locations.toml からデフォルトの観測地点リストを読み込んで返す。
 
     Returns:
         list[Location]: デフォルトの観測地点の Location モデルリスト。
     """
-    return [
-        Location(
-            area_name="首都圏",
-            prec_no=44,
-            prec_name="東京",
-            block_no=47662,
-            block_name="東京",
-        ),
-        Location(
-            area_name="近畿",
-            prec_no=62,
-            prec_name="大阪",
-            block_no=47772,
-            block_name="大阪",
-        ),
-        Location(
-            area_name="九州",
-            prec_no=82,
-            prec_name="福岡",
-            block_no=47807,
-            block_name="福岡",
-        ),
-        Location(
-            area_name="四国",
-            prec_no=72,
-            prec_name="香川",
-            block_no=47891,
-            block_name="高松",
-        ),
-        Location(
-            area_name="中国",
-            prec_no=67,
-            prec_name="広島",
-            block_no=47765,
-            block_name="広島",
-        ),
-        Location(
-            area_name="東海",
-            prec_no=51,
-            prec_name="愛知",
-            block_no=47636,
-            block_name="名古屋",
-        ),
-    ]
+    with _LOCATIONS_TOML.open("rb") as f:
+        data = tomllib.load(f)
+    return [Location.model_validate(item) for item in data["locations"]]
 
 
 def get_locations_from_env() -> list[Location]:
