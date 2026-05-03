@@ -1,11 +1,15 @@
 """config.py のユニットテスト。"""
 
+import logging
+from unittest import mock
+
 import pytest
 
 from config import (
     get_default_locations,
     get_locations_from_env,
     parse_location_json,
+    setup_logging,
 )
 from models import Location
 
@@ -110,3 +114,33 @@ class TestGetLocationsFromEnv:
         monkeypatch.setenv("JMA_LOCATIONS", "invalid json")
         result = get_locations_from_env()
         assert len(result) == 6
+
+
+class TestSetupLogging:
+    """setup_logging のテスト。
+
+    pytest が自身の LogCaptureHandler をルートロガーに追加するため、
+    basicConfig() の「ハンドラーがなければ設定する」という仕様と干渉する。
+    そのためモックを使って basicConfig の呼び出し内容を検証する。
+    """
+
+    def test_calls_basicconfig_with_info_level(self):
+        """logging.basicConfig を INFO レベルで呼び出す。"""
+        with mock.patch("logging.basicConfig") as mock_basicconfig:
+            setup_logging()
+            mock_basicconfig.assert_called_once()
+            assert mock_basicconfig.call_args.kwargs["level"] == logging.INFO
+
+    def test_format_includes_module_name(self):
+        """フォーマットに %(name)s（モジュール名）が含まれる。"""
+        with mock.patch("logging.basicConfig") as mock_basicconfig:
+            setup_logging()
+            fmt = mock_basicconfig.call_args.kwargs["format"]
+            assert "%(name)s" in fmt
+
+    def test_format_includes_timestamp(self):
+        """フォーマットに %(asctime)s（タイムスタンプ）が含まれる。"""
+        with mock.patch("logging.basicConfig") as mock_basicconfig:
+            setup_logging()
+            fmt = mock_basicconfig.call_args.kwargs["format"]
+            assert "%(asctime)s" in fmt

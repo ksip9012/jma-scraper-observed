@@ -11,6 +11,22 @@ from models import Location
 logger = logging.getLogger(__name__)
 
 
+def setup_logging() -> None:
+    """ロギングの初期設定を行う。
+
+    エントリポイント（main.py, download_history.py）から1回だけ呼び出す。
+    各モジュールは logging.getLogger(__name__) のみ使用し、
+    この関数は呼び出さない。
+
+    Returns:
+        None
+    """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+    )
+
+
 def get_env_str(key: str, default: str = "") -> str:
     """環境変数を文字列として取得する。
 

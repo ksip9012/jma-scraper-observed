@@ -9,13 +9,10 @@ import pandas as pd
 import requests
 from dateutil.relativedelta import relativedelta
 
-from config import get_locations_from_env
+from config import get_locations_from_env, setup_logging
 from scraper import fetch_and_validate_weather
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 
