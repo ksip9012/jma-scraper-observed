@@ -3,7 +3,6 @@
 import logging
 
 import pandas as pd
-import pandas_gbq
 from google.cloud import bigquery
 
 logger = logging.getLogger(__name__)
@@ -42,20 +41,16 @@ def delete_month_data(
 
 
 def upload_to_bigquery(
+    client: bigquery.Client,
     df: pd.DataFrame,
-    project_id: str,
-    dataset_id: str,
-    table_id: str,
     table_full_id: str,
 ) -> None:
     """DataFrame を BigQuery テーブルへ追記アップロードする。
 
     Args:
+        client (bigquery.Client): BigQuery クライアント。
         df (pd.DataFrame): アップロード対象のデータフレーム。
-        project_id (str): GCP プロジェクト ID。
-        dataset_id (str): BigQuery データセット ID。
-        table_id (str): BigQuery テーブル ID。
-        table_full_id (str): ログ出力用のフル ID
+        table_full_id (str): 対象テーブルのフル ID
             （例: `project.dataset.table`）。
 
     Raises:
@@ -67,10 +62,9 @@ def upload_to_bigquery(
         len(df),
         table_full_id,
     )
-    pandas_gbq.to_gbq(
-        df,
-        f"{dataset_id}.{table_id}",
-        project_id=project_id,
-        if_exists="append",
-        progress_bar=False,
+    job_config = bigquery.LoadJobConfig(
+        write_disposition="WRITE_APPEND",
     )
+    client.load_table_from_dataframe(
+        df, table_full_id, job_config=job_config
+    ).result()
