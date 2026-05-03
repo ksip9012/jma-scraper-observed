@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+import requests
 from dateutil.relativedelta import relativedelta
 
 from config import get_locations_from_env
@@ -74,7 +75,7 @@ def download_5years_history() -> None:
 
                 time.sleep(1)
 
-            except Exception as e:
+            except (requests.HTTPError, ValueError) as e:
                 logger.error(
                     "%04d/%02d %s の取得中にエラーが発生しました: %s",
                     year,

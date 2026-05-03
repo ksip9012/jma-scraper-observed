@@ -4,6 +4,8 @@ import json
 import logging
 import os
 
+from pydantic import ValidationError
+
 from models import Location
 
 logger = logging.getLogger(__name__)
@@ -35,7 +37,7 @@ def parse_location_json(locations_json: str) -> list[Location]:
     try:
         raw_list = json.loads(locations_json)
         return [Location.model_validate(item) for item in raw_list]
-    except Exception as e:
+    except (json.JSONDecodeError, ValidationError) as e:
         logger.error("JMA_LOCATIONSのパースに失敗: %s", e)
         return []
 
