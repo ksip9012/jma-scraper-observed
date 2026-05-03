@@ -123,7 +123,21 @@ def _validate_weather_records(
             if any(v is not None for v in obs_values):
                 validated_records.append(data_dict)
 
-        except ValueError, ValidationError:
+        except ValueError:
+            logger.debug(
+                "%04d/%02d 日付パース失敗のためスキップ: %s",
+                year,
+                month,
+                day_val,
+            )
+            continue
+        except ValidationError as e:
+            logger.debug(
+                "%04d/%02d バリデーション失敗のためスキップ: %s",
+                year,
+                month,
+                e,
+            )
             continue
 
     return validated_records

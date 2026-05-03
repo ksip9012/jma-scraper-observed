@@ -6,6 +6,7 @@ import sys
 from datetime import datetime, timedelta
 
 import pandas as pd
+import requests
 from google.cloud import bigquery
 
 from bigquery_client import delete_month_data, upload_to_bigquery
@@ -52,7 +53,7 @@ def weather_ingestion_handler() -> None:
             )
             if not df.empty:
                 all_dfs.append(df)
-        except Exception:
+        except requests.HTTPError, ValueError:
             logger.exception("%s のデータ取得に失敗しました。", loc.block_name)
 
     if not all_dfs:
