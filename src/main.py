@@ -10,10 +10,10 @@ import requests
 from google.cloud import bigquery
 
 from bigquery_client import delete_month_data, upload_to_bigquery
-from config import get_locations_from_env
+from config import get_locations_from_env, setup_logging
 from scraper import fetch_and_validate_weather
 
-logging.basicConfig(level=logging.INFO)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 
