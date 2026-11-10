@@ -3,8 +3,6 @@
 import logging
 from unittest import mock
 
-import pytest
-
 from config import (
     get_default_locations,
     get_locations_from_env,

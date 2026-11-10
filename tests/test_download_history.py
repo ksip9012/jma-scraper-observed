@@ -5,7 +5,6 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-import pytest
 import requests
 
 from config import JST
@@ -197,9 +196,7 @@ class TestDownload5YearsHistory:
         output = tmp_path / "out.csv"
         df = pd.DataFrame({"col": [1]})
         with (
-            mock.patch(
-                "download_history._build_month_range"
-            ) as mock_range,
+            mock.patch("download_history._build_month_range") as mock_range,
             mock.patch("download_history._fetch_all") as mock_fetch,
             mock.patch("download_history.get_locations_from_env") as mock_locs,
         ):
@@ -213,9 +210,7 @@ class TestDownload5YearsHistory:
         """データが1件も取得できなかった場合は CSV を保存しない。"""
         output = tmp_path / "out.csv"
         with (
-            mock.patch(
-                "download_history._build_month_range"
-            ) as mock_range,
+            mock.patch("download_history._build_month_range") as mock_range,
             mock.patch("download_history._fetch_all") as mock_fetch,
             mock.patch("download_history.get_locations_from_env") as mock_locs,
         ):
@@ -229,9 +224,7 @@ class TestDownload5YearsHistory:
         """_build_month_range が years=5 で呼ばれる。"""
         output = tmp_path / "out.csv"
         with (
-            mock.patch(
-                "download_history._build_month_range"
-            ) as mock_range,
+            mock.patch("download_history._build_month_range") as mock_range,
             mock.patch("download_history._fetch_all") as mock_fetch,
             mock.patch("download_history.get_locations_from_env") as mock_locs,
         ):
