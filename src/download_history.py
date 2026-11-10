@@ -9,7 +9,7 @@ import pandas as pd
 import requests
 from dateutil.relativedelta import relativedelta
 
-from config import get_locations_from_env, setup_logging
+from config import JST, get_locations_from_env, setup_logging
 from models import Location
 from scraper import fetch_and_validate_weather
 
@@ -30,7 +30,7 @@ def _build_month_range(years: int) -> list[tuple[int, int]]:
     Returns:
         list[tuple[int, int]]: 開始月から現在月までの (year, month) のリスト。
     """
-    end_date = datetime.now()
+    end_date = datetime.now(JST)
     start_date = end_date - relativedelta(years=years)
     months = []
     current = start_date

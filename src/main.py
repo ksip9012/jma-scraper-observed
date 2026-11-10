@@ -10,7 +10,7 @@ import requests
 from google.cloud import bigquery
 
 from bigquery_client import delete_month_data, upload_to_bigquery
-from config import get_locations_from_env, setup_logging
+from config import JST, get_locations_from_env, setup_logging
 from scraper import fetch_and_validate_weather
 
 setup_logging()
@@ -35,7 +35,7 @@ def weather_ingestion_handler() -> None:
         raise RuntimeError("GCP_PROJECT_ID が設定されていません。")
 
     locations = get_locations_from_env()
-    target_date = datetime.now() - timedelta(days=1)
+    target_date = datetime.now(JST) - timedelta(days=1)
     year, month = target_date.year, target_date.month
 
     client = bigquery.Client(project=project_id)

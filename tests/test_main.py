@@ -1,11 +1,13 @@
 """main.py の weather_ingestion_handler のユニットテスト。"""
 
 import unittest.mock as mock
+from datetime import datetime
 
 import pandas as pd
 import pytest
 import requests
 
+from config import JST
 from main import weather_ingestion_handler
 from models import Location
 
@@ -100,6 +102,30 @@ class TestWeatherIngestionHandler:
         ):
             weather_ingestion_handler()  # 例外が出なければ成功
         mock_upload.assert_not_called()
+
+    def test_target_month_uses_yesterday_in_japan_time(self, monkeypatch):
+        """対象の月は、日本時間の昨日で決める。"""
+        monkeypatch.setenv("GCP_PROJECT_ID", "test-project")
+        with (
+            mock.patch("main.datetime") as mock_datetime,
+            mock.patch("main.bigquery.Client"),
+            mock.patch(
+                "main.get_locations_from_env", return_value=SINGLE_LOCATION
+            ),
+            mock.patch(
+                "main.fetch_and_validate_weather",
+                return_value=pd.DataFrame(),
+            ) as mock_fetch,
+        ):
+            mock_datetime.now.return_value = datetime(
+                2026, 3, 2, 0, 30, tzinfo=JST
+            )
+            weather_ingestion_handler()
+        mock_datetime.now.assert_called_once_with(JST)
+        assert mock_fetch.call_args.kwargs["year"] == 2026
+        assert mock_fetch.call_args.kwargs["month"] == 3
+||||||| b3c695f
+
 
     @pytest.mark.parametrize(
         "error",
