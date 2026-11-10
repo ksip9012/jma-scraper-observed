@@ -114,7 +114,7 @@ class TestLocation:
             )
 
     def test_invalid_type_raises(self):
-        """prec_no に文字列を渡した場合、数値変換できなければ ValidationError。"""
+        """prec_no が数値に変換できない文字列なら ValidationError。"""
         with pytest.raises(ValidationError):
             Location(
                 area_name="首都圏",

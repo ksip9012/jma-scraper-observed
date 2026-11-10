@@ -175,7 +175,9 @@ class TestFetchAndValidateWeather:
 
     def test_success_returns_dataframe(self):
         """正常系は有効レコードを含む DataFrame を返す。"""
-        with mock.patch("scraper._fetch_html", return_value=MINIMAL_TABLE_HTML):
+        with mock.patch(
+            "scraper._fetch_html", return_value=MINIMAL_TABLE_HTML
+        ):
             result = fetch_and_validate_weather(TOKYO, 2024, 1)
         assert isinstance(result, pd.DataFrame)
         assert not result.empty
@@ -184,12 +186,8 @@ class TestFetchAndValidateWeather:
     def test_empty_dataframe_when_no_valid_records(self):
         """有効なレコードがない場合は空の DataFrame を返す。"""
         with (
-            mock.patch(
-                "scraper._fetch_html", return_value=MINIMAL_TABLE_HTML
-            ),
-            mock.patch(
-                "scraper._validate_weather_records", return_value=[]
-            ),
+            mock.patch("scraper._fetch_html", return_value=MINIMAL_TABLE_HTML),
+            mock.patch("scraper._validate_weather_records", return_value=[]),
         ):
             result = fetch_and_validate_weather(TOKYO, 2024, 1)
         assert isinstance(result, pd.DataFrame)
