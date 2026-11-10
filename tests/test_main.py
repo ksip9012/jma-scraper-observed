@@ -124,8 +124,6 @@ class TestWeatherIngestionHandler:
         mock_datetime.now.assert_called_once_with(JST)
         assert mock_fetch.call_args.kwargs["year"] == 2026
         assert mock_fetch.call_args.kwargs["month"] == 3
-||||||| b3c695f
-
 
     @pytest.mark.parametrize(
         "error",
