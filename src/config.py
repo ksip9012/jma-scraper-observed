@@ -5,10 +5,13 @@ import logging
 import os
 import tomllib
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 
 from models import Location
+
+JST = ZoneInfo("Asia/Tokyo")
 
 _LOCATIONS_TOML = Path(__file__).parent / "locations.toml"
 

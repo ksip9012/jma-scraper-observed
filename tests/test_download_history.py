@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 import requests
 
+from config import JST
 from download_history import (
     _build_month_range,
     _fetch_all,
@@ -42,7 +43,7 @@ class TestBuildMonthRange:
 
     def test_last_element_is_current_month(self):
         """最後の要素が現在の年月である。"""
-        now = datetime.now()
+        now = datetime.now(JST)
         result = _build_month_range(1)
         assert result[-1] == (now.year, now.month)
 
@@ -65,6 +66,7 @@ class TestBuildMonthRange:
         assert result[0] == (2024, 3)
         assert result[-1] == (2025, 3)
         assert len(result) == 13
+        mock_dt.now.assert_called_once_with(JST)
 
 
 class TestFetchAll:
