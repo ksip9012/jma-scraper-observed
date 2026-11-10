@@ -7,6 +7,8 @@ import pytest
 
 from bigquery_client import delete_month_data, upload_to_bigquery
 
+BLOCK_NOS = ["47662", "47682"]
+
 
 class TestDeleteMonthData:
     """delete_month_data のテスト。"""
@@ -14,26 +16,26 @@ class TestDeleteMonthData:
     def test_query_is_called(self):
         """client.query が1回呼ばれる。"""
         mock_client = mock.MagicMock()
-        delete_month_data(mock_client, "proj.ds.tbl", 2024, 1)
+        delete_month_data(mock_client, "proj.ds.tbl", 2024, 1, BLOCK_NOS)
         mock_client.query.assert_called_once()
 
     def test_result_is_called(self):
         """query().result() が呼ばれる。"""
         mock_client = mock.MagicMock()
-        delete_month_data(mock_client, "proj.ds.tbl", 2024, 1)
+        delete_month_data(mock_client, "proj.ds.tbl", 2024, 1, BLOCK_NOS)
         mock_client.query.return_value.result.assert_called_once()
 
     def test_query_contains_date_prefix(self):
         """クエリに正しい年月プレフィックスが含まれる。"""
         mock_client = mock.MagicMock()
-        delete_month_data(mock_client, "proj.ds.tbl", 2024, 1)
+        delete_month_data(mock_client, "proj.ds.tbl", 2024, 1, BLOCK_NOS)
         query = mock_client.query.call_args[0][0]
         assert "2024-01-" in query
 
     def test_query_contains_table_id(self):
         """クエリに対象テーブル ID が含まれる。"""
         mock_client = mock.MagicMock()
-        delete_month_data(mock_client, "proj.ds.tbl", 2024, 1)
+        delete_month_data(mock_client, "proj.ds.tbl", 2024, 1, BLOCK_NOS)
         query = mock_client.query.call_args[0][0]
         assert "proj.ds.tbl" in query
 
@@ -44,9 +46,21 @@ class TestDeleteMonthData:
     def test_month_zero_padded(self, month, expected_prefix):
         """月は2桁ゼロ埋めされる。"""
         mock_client = mock.MagicMock()
-        delete_month_data(mock_client, "proj.ds.tbl", 2024, month)
+        delete_month_data(mock_client, "proj.ds.tbl", 2024, month, BLOCK_NOS)
         query = mock_client.query.call_args[0][0]
         assert expected_prefix in query
+
+    def test_query_is_limited_to_given_block_nos(self):
+        """指定した地点だけを削除するクエリになる。"""
+        mock_client = mock.MagicMock()
+        delete_month_data(mock_client, "proj.ds.tbl", 2024, 1, BLOCK_NOS)
+        query = mock_client.query.call_args[0][0]
+        job_config = mock_client.query.call_args.kwargs["job_config"]
+        assert "block_no IN UNNEST(@block_nos)" in query
+        parameter = job_config.query_parameters[0]
+        assert parameter.name == "block_nos"
+        assert parameter.array_type == "STRING"
+        assert parameter.values == BLOCK_NOS
 
 
 class TestUploadToBigquery:

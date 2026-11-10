@@ -41,8 +41,6 @@ def weather_ingestion_handler() -> None:
     client = bigquery.Client(project=project_id)
     table_full_id = f"{project_id}.{dataset_id}.{table_id}"
 
-    delete_month_data(client, table_full_id, year, month)
-
     all_dfs = []
     for loc in locations:
         try:
@@ -53,7 +51,7 @@ def weather_ingestion_handler() -> None:
             )
             if not df.empty:
                 all_dfs.append(df)
-        except requests.HTTPError, ValueError:
+        except requests.RequestException, ValueError:
             logger.exception("%s のデータ取得に失敗しました。", loc.block_name)
 
     if not all_dfs:
@@ -63,6 +61,10 @@ def weather_ingestion_handler() -> None:
         return
 
     combined_df = pd.concat(all_dfs, ignore_index=True)
+
+    # 取得できた地点の分だけを入れ替え、失敗した地点の既存データは残す
+    block_nos = sorted(combined_df["block_no"].unique().tolist())
+    delete_month_data(client, table_full_id, year, month, block_nos)
     upload_to_bigquery(client, combined_df, table_full_id)
     logger.info(
         "%s を %04d/%02d のデータで更新しました。", table_full_id, year, month

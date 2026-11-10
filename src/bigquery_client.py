@@ -13,10 +13,12 @@ def delete_month_data(
     table_full_id: str,
     year: int,
     month: int,
+    block_nos: list[str],
 ) -> None:
-    """指定した年月の既存データを BigQuery から削除する。
+    """指定した年月・地点の既存データを BigQuery から削除する。
 
-    冪等性を担保するため、アップロード前に当月分のデータを削除する。
+    冪等性を担保するため、アップロード前に、取得できた地点の当月分の
+    データを削除する。
 
     Args:
         client (bigquery.Client): BigQuery クライアント。
@@ -24,6 +26,7 @@ def delete_month_data(
             （例: `project.dataset.table`）。
         year (int): 削除対象の年。
         month (int): 削除対象の月。
+        block_nos (list[str]): 削除対象の地点番号。
 
     Raises:
         google.cloud.exceptions.GoogleCloudError: BigQuery へのクエリが
@@ -33,11 +36,21 @@ def delete_month_data(
     delete_query = f"""
         DELETE FROM `{table_full_id}`
         WHERE STARTS_WITH(date, '{date_prefix}')
+          AND block_no IN UNNEST(@block_nos)
     """
-    logger.info(
-        "%04d/%02d の既存データを削除中: %s", year, month, table_full_id
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ArrayQueryParameter("block_nos", "STRING", block_nos)
+        ]
     )
-    client.query(delete_query).result()
+    logger.info(
+        "%04d/%02d の既存データを削除中: %s（%d地点）",
+        year,
+        month,
+        table_full_id,
+        len(block_nos),
+    )
+    client.query(delete_query, job_config=job_config).result()
 
 
 def upload_to_bigquery(
